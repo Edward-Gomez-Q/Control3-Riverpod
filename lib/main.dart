@@ -1,15 +1,12 @@
-import 'dart:convert';
+import 'package:controlriverpod/Riverpod/urlModel.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
-
+final urlProvider=StateNotifierProvider((ref) => UrlNotifier());
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -17,33 +14,17 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home:MyHomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
 
-class _MyHomePageState extends State<MyHomePage> {
+class MyHomePage extends ConsumerWidget {
 
-  Future<String> _loadNewImage() async {
-    String url='';
-    final response = await http.get(Uri.parse('https://dog.ceo/api/breeds/image/random'));
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      url = jsonResponse['message'];
-    } else {
-      url='';
-    }
-    return url;
-  }
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final url=ref.watch(urlProvider) as UrlModel;
     return Scaffold(
       body: Center(
         child: Column(
@@ -52,26 +33,17 @@ class _MyHomePageState extends State<MyHomePage> {
             const Text(
               'Random Dog Image',
             ),
-            FutureBuilder(
-              future: _loadNewImage(),
-              builder: (context, snapshot) {
-                if(snapshot.data==null)
-                {
-                  return const SizedBox(height: 200,width: 200);
-                }
-                else
-                {
-                  return Image.network(snapshot.data!, fit: BoxFit.cover,width: 200,height: 200,);
-                }
-              },),
-            ElevatedButton(onPressed: () {
-              setState(() {
-                _loadNewImage();
-              });
+            url.url==''?const SizedBox(width: 200,height: 200,child: Center(child: Text('Presione el boton')),):Image.network(url.url, fit: BoxFit.cover,width: 200,height: 200,),
+            ElevatedButton(onPressed: () async {
+               ref.read(urlProvider.notifier).getNewImage();
             }, child: const Text('Cargar nueva Imagen')),
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+  Future<String> _loadNewImage(WidgetRef ref) async {
+    String url = await ref.read(urlProvider.notifier).getNewImage();
+    return url;
   }
 }
